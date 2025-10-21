@@ -58,6 +58,8 @@ private:
     std::vector<std::string> all_categories_names;
     std::vector<std::string> all_brands_names;
     std::map<std::string, int> card_usage_count;
+    std::map<std::string, std::string> card_pay_system;
+    std::map<std::string, std::string> card_bank;
     std::vector<std::string> used_cards;
     std::map<std::string, std::unordered_set<std::string>> store_receipts;
 public:

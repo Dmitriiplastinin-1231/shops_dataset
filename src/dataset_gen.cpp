@@ -17,8 +17,8 @@ const int TOTAL_ROWS = 50000;
 const int MIN_CATEGORIES = 50;
 const int MIN_BRANDS = 500;
 const int MAX_CARD_REPEATS = 5;
-const int MIN_ITEMS_PER_RECEIPT = 1;
-const int MAX_ITEMS_PER_RECEIPT = 1;
+const int MIN_ITEMS_PER_RECEIPT = 2;
+const int MAX_ITEMS_PER_RECEIPT = 4;
 const std::vector<std::string> CATEGORY_CLASSES = {"техника", "продукты", "предметы интерьера", "для дома", "одежда", "спорт", "косметические средства", "для детей", "товары для учебы"};
 
 // const bool TECHN = true;
@@ -423,8 +423,8 @@ void DatasetGenerator::generateDataset(const std::string& filename)
         std::pair<double, double> coords = get_random_coordinate(store);
         std::string coordinates = format_coordinates(coords.first, coords.second);
         
-        int itemsCount = rng.randomInt(MIN_ITEMS_PER_RECEIPT, MAX_ITEMS_PER_RECEIPT);
-        std::vector<Product> products = generate_products_for_store(store, itemsCount);
+        int items_count = rng.randomInt(MIN_ITEMS_PER_RECEIPT, MAX_ITEMS_PER_RECEIPT);
+        std::vector<Product> products = generate_products_for_store(store, items_count);
         
         if (products.empty()) continue;
         
@@ -441,34 +441,39 @@ void DatasetGenerator::generateDataset(const std::string& filename)
             total_price += product.price;
         }
         
-        std::string categories_str = escape_csv_field(join_list(product_categories));
-        std::string brands_str = escape_csv_field(join_list(product_brands));
-        std::string prices_str = escape_csv_field(join_list(product_prices));
+        // std::string categories_str = escape_csv_field(join_list(product_categories));
+        // std::string brands_str = escape_csv_field(join_list(product_brands));
+        // std::string prices_str = escape_csv_field(join_list(product_prices));
         
         std::string card_number = get_valid_card();
         card_usage_count[card_number]++;
         
         std::string receipt_number = generate_receipt_number(store.name);
 
-        file << escape_csv_field(store.name) << ","
-                 << escape_csv_field(datetime) << ","
-                 << coordinates << ","
-                 << categories_str << ","
-                 << brands_str << ","
-                 << prices_str << ","
-                 << escape_csv_field(card_number) << ","
-                 << itemsCount << ","
-                 << escape_csv_field(receipt_number) << ","
-                 << std::fixed << std::setprecision(2) << total_price << "\n";
+        for (int i = 0; i < items_count; i++)
+        {
+            file << escape_csv_field(store.name) << ","
+                     << escape_csv_field(datetime) << ","
+                     << coordinates << ","
+                     << product_categories[i] << ","
+                     << product_brands[i] << ","
+                     << product_prices[i] << ","
+                     << escape_csv_field(card_number) << ","
+                     << items_count << ","
+                     << escape_csv_field(receipt_number) << ","
+                     << std::fixed << std::setprecision(2) << total_price << "\n";
+
+        }
             
-        rows_generated++;
+        rows_generated += items_count;
 
         if (rows_generated % 5000 == 0) 
         {
             std::cout << "Сгенерировано строк: " << rows_generated << "/" << TOTAL_ROWS << std::endl;
         }
     }
-
+    
+    std::cout << "Сгенерировано строк: " << rows_generated << "/" << TOTAL_ROWS << std::endl;
     
 
     file.close();
