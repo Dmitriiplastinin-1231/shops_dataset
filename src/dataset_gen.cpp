@@ -13,12 +13,21 @@
 
 #include "dataset_gen.hpp"
 
-const int TOTAL_ROWS = 50000;
+const int TOTAL_ROWS = 500000;
 const int MIN_CATEGORIES = 50;
 const int MIN_BRANDS = 500;
 const int MAX_CARD_REPEATS = 5;
 const int MIN_ITEMS_PER_RECEIPT = 2;
 const int MAX_ITEMS_PER_RECEIPT = 4;
+// веса для карт
+const int WEIGHT_OF_MASTERCARD = 20;
+const int WEIGHT_OF_MAESTRO = 20;
+const int WEIGHT_OF_VISA = 20;
+
+const int WEIGHT_OF_SBER = 20;
+const int WEIGHT_OF_TBANK = 20;
+const int WEIGHT_OF_VTB = 20;
+
 const std::vector<std::string> CATEGORY_CLASSES = {"техника", "продукты", "предметы интерьера", "для дома", "одежда", "спорт", "косметические средства", "для детей", "товары для учебы"};
 
 // const bool TECHN = true;
@@ -336,13 +345,34 @@ std::string DatasetGenerator::escape_csv_field(const std::string& field)
     return field;
 }
 
-std::string DatasetGenerator::generate_card_number() {
+std::string DatasetGenerator::generate_card_number() 
+{
     std::stringstream ss;
     for (int i = 0; i < 4; i++) {
         if (i > 0) ss << " ";
         ss << std::setw(4) << std::setfill('0') << rng.randomInt(0, 9999);
     }
     return ss.str();
+}
+
+void DatasetGenerator::generate_card_pay_system(std::string card_num)
+{
+    int random_change = rng.randomInt(1, WEIGHT_OF_MASTERCARD + WEIGHT_OF_MAESTRO + WEIGHT_OF_VISA);
+    
+    if (random_change <= WEIGHT_OF_MASTERCARD){card_pay_system[card_num] = "MasterCard";}
+    else if (random_change <= WEIGHT_OF_MAESTRO){card_pay_system[card_num] = "Maestro";}
+    else if (random_change <= WEIGHT_OF_VISA){card_pay_system[card_num] = "VISA";}
+    
+}
+
+void DatasetGenerator::generate_card_bank(std::string card_num)
+{
+    int random_change = rng.randomInt(1, WEIGHT_OF_SBER + WEIGHT_OF_TBANK + WEIGHT_OF_VTB);
+
+    if (random_change <= WEIGHT_OF_SBER){card_bank[card_num] = "Sberbank";}
+    else if (random_change <= WEIGHT_OF_TBANK){card_bank[card_num] = "TBank";}
+    else if (random_change <= WEIGHT_OF_VTB){card_bank[card_num] = "VTB";}
+    
 }
 
 std::string DatasetGenerator::get_valid_card() {
@@ -354,7 +384,9 @@ std::string DatasetGenerator::get_valid_card() {
     }
     
     std::string new_card = generate_card_number();
-    used_cards.push_back(new_card);
+    used_cards.push_back(new_card); 
+    generate_card_bank(new_card);
+    generate_card_pay_system(new_card);
     card_usage_count[new_card] = 0;
     return new_card;
 }
@@ -473,7 +505,7 @@ void DatasetGenerator::generateDataset(const std::string& filename)
         }
     }
     
-    std::cout << "Сгенерировано строк: " << rows_generated << "/" << TOTAL_ROWS << std::endl;
+    std::cout << "Сгенерировано всего строк: " << rows_generated << "/" << TOTAL_ROWS << std::endl;
     
 
     file.close();

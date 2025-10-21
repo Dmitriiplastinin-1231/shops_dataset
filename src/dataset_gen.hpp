@@ -82,6 +82,9 @@ private:
     std::string generate_date_time(const Store& store);
     std::string generate_receipt_number(const std::string& store_name);
     std::vector<Product> generate_products_for_store(const Store& store, int count);
+    void generate_card_bank(std::string card_num);
+    void generate_card_pay_system(std::string card_num);
+
     
     std::string format_coordinates(double lat, double lon);
     std::string get_valid_card();
