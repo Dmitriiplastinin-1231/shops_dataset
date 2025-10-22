@@ -13,22 +13,27 @@
 
 #include "dataset_gen.hpp"
 
-const int TOTAL_ROWS = 500000;
+const char VISA = '4';
+const char MASTERCARD = '5';
+const char MIR = '2';
+
+const int TOTAL_ROWS = 100000;
 const int MIN_CATEGORIES = 50;
 const int MIN_BRANDS = 500;
 const int MAX_CARD_REPEATS = 5;
 const int MIN_ITEMS_PER_RECEIPT = 2;
-const int MAX_ITEMS_PER_RECEIPT = 4;
+const int MAX_ITEMS_PER_RECEIPT = 2;
 // веса для карт
 const int WEIGHT_OF_MASTERCARD = 20;
-const int WEIGHT_OF_MAESTRO = 20;
-const int WEIGHT_OF_VISA = 20;
+const int WEIGHT_OF_MIR = 20;
+// const int WEIGHT_OF_VISA = 20;
 
 const int WEIGHT_OF_SBER = 20;
 const int WEIGHT_OF_TBANK = 20;
 const int WEIGHT_OF_VTB = 20;
 
-const std::vector<std::string> CATEGORY_CLASSES = {"техника", "продукты", "предметы интерьера", "для дома", "одежда", "спорт", "косметические средства", "для детей", "товары для учебы"};
+const std::vector<std::string> CATEGORY_CLASSES = {"техника", "продукты", "для дома и офиса", "спорт", "косметические средства", "для детей"};
+// const std::vector<std::string> CATEGORY_CLASSES = {"техника", "продукты", "для дома", "спорт", "косметические средства",  "товары для учебы"};
 
 // const bool TECHN = true;
 // const bool PRODUCT = true;
@@ -117,29 +122,45 @@ void DatasetGenerator::parse_store_from_csv(const std::string& filename)
         while ((pos = modified_line.find(",\"", pos)) != std::string::npos) {
             modified_line.replace(pos, 1, "|");
         }
+       
+        if ((pos = modified_line.rfind("\",")) != std::string::npos){
+            modified_line.replace(pos, 2, "\"|");
+        }
 
-        std::string store_name, categories_str, coordinates_str;
+
+        std::string store_name, categories_str, coordinates_str, store_category;
         std::stringstream ss(modified_line);
         std::getline(ss, store_name, '|');
         std::getline(ss, categories_str, '|');
-        std::getline(ss, coordinates_str);
-
+        std::getline(ss, coordinates_str, '|');
+        std::getline(ss, store_category);
 
         Store store;
         store.name = store_name;
         store.working_hours = "10:00-22:00";
-
-
+        
+        
         store.categories_names = parse_str_in_vector(categories_str, ',');
         for (std::string category : store.categories_names)
         {
+            
             if (std::find(all_categories_names.begin(), all_categories_names.end(), category) == all_categories_names.end())
             {
-                Category* new_category = new Category;;
+                Category* new_category = new Category;
                 new_category->name = category; 
                 all_categories_names.push_back(category);
                 all_categories.push_back(new_category);
                 store.categories.push_back(new_category);
+            } else 
+            {
+                for (Category* category_obj : all_categories)
+                {
+                    if (category_obj->name == category) 
+                    { 
+                        store.categories.push_back(category_obj);
+                        break;
+                    }
+                }
             }
         }
         
@@ -345,24 +366,26 @@ std::string DatasetGenerator::escape_csv_field(const std::string& field)
     return field;
 }
 
-std::string DatasetGenerator::generate_card_number() 
+std::string DatasetGenerator::generate_card_number(char first_num) 
 {
     std::stringstream ss;
-    for (int i = 0; i < 4; i++) {
-        if (i > 0) ss << " ";
+    ss << first_num << std::setw(3) << std::setfill('0') << rng.randomInt(0, 9999);
+    for (int i = 0; i < 3; i++) {
+        ss << " ";
         ss << std::setw(4) << std::setfill('0') << rng.randomInt(0, 9999);
     }
     return ss.str();
 }
 
-void DatasetGenerator::generate_card_pay_system(std::string card_num)
+char DatasetGenerator::generate_card_pay_system()
 {
-    int random_change = rng.randomInt(1, WEIGHT_OF_MASTERCARD + WEIGHT_OF_MAESTRO + WEIGHT_OF_VISA);
+    // int random_change = rng.randomInt(1, WEIGHT_OF_MASTERCARD + WEIGHT_OF_MIR + WEIGHT_OF_VISA);
+    int random_change = rng.randomInt(1, WEIGHT_OF_MASTERCARD + WEIGHT_OF_MIR);
     
-    if (random_change <= WEIGHT_OF_MASTERCARD){card_pay_system[card_num] = "MasterCard";}
-    else if (random_change <= WEIGHT_OF_MAESTRO){card_pay_system[card_num] = "Maestro";}
-    else if (random_change <= WEIGHT_OF_VISA){card_pay_system[card_num] = "VISA";}
-    
+    if (random_change <= WEIGHT_OF_MASTERCARD){return MASTERCARD;}
+    else if (random_change <= WEIGHT_OF_MASTERCARD + WEIGHT_OF_MIR){return MIR;}
+    // else if (random_change <= WEIGHT_OF_MASTERCARD + WEIGHT_OF_MIR + WEIGHT_OF_VISA){return VISA;}
+    return ' ';
 }
 
 void DatasetGenerator::generate_card_bank(std::string card_num)
@@ -383,10 +406,9 @@ std::string DatasetGenerator::get_valid_card() {
         }
     }
     
-    std::string new_card = generate_card_number();
+    std::string new_card = generate_card_number(generate_card_pay_system());
     used_cards.push_back(new_card); 
-    generate_card_bank(new_card);
-    generate_card_pay_system(new_card);
+    // generate_card_bank(new_card);
     card_usage_count[new_card] = 0;
     return new_card;
 }
@@ -481,9 +503,10 @@ void DatasetGenerator::generateDataset(const std::string& filename)
         card_usage_count[card_number]++;
         
         std::string receipt_number = generate_receipt_number(store.name);
-
+        
         for (int i = 0; i < items_count; i++)
         {
+            
             file << escape_csv_field(store.name) << ","
                      << escape_csv_field(datetime) << ","
                      << coordinates << ","

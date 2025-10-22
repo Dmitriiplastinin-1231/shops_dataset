@@ -78,12 +78,12 @@ private:
     std::vector<std::string> get_unique_categories(const std::vector<Product>& products);
     std::pair<double, double> get_random_coordinate(const Store& store);
     
-    std::string generate_card_number();
+    std::string generate_card_number(char first_num);
     std::string generate_date_time(const Store& store);
     std::string generate_receipt_number(const std::string& store_name);
     std::vector<Product> generate_products_for_store(const Store& store, int count);
     void generate_card_bank(std::string card_num);
-    void generate_card_pay_system(std::string card_num);
+    char generate_card_pay_system();
 
     
     std::string format_coordinates(double lat, double lon);
