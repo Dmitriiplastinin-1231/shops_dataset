@@ -17,20 +17,20 @@ const char VISA = '4';
 const char MASTERCARD = '5';
 const char MIR = '2';
 
-const int TOTAL_ROWS = 100000;
+int TOTAL_ROWS = 100000;
 const int MIN_CATEGORIES = 50;
 const int MIN_BRANDS = 500;
 const int MAX_CARD_REPEATS = 5;
 const int MIN_ITEMS_PER_RECEIPT = 2;
 const int MAX_ITEMS_PER_RECEIPT = 2;
 // веса для карт
-const int WEIGHT_OF_MASTERCARD = 20;
-const int WEIGHT_OF_MIR = 20;
+int WEIGHT_OF_MASTERCARD = 20;
+int WEIGHT_OF_MIR = 20;
 // const int WEIGHT_OF_VISA = 20;
 
-const int WEIGHT_OF_SBER = 20;
-const int WEIGHT_OF_TBANK = 20;
-const int WEIGHT_OF_VTB = 20;
+int WEIGHT_OF_SBER = 20;
+int WEIGHT_OF_TBANK = 20;
+int WEIGHT_OF_VTB = 20;
 
 const std::vector<std::string> CATEGORY_CLASSES = {"техника", "продукты", "для дома и офиса", "спорт", "косметические средства", "для детей"};
 // const std::vector<std::string> CATEGORY_CLASSES = {"техника", "продукты", "для дома", "спорт", "косметические средства",  "товары для учебы"};
@@ -49,11 +49,27 @@ const std::vector<std::string> CATEGORY_CLASSES = {"техника", "проду
 
 int main()
 {
+    std::cout << "Введите веса платежных систем, через пробелы в след. порядке: MasterCard, Мир: " << std::endl;
+    std::cin >> WEIGHT_OF_MASTERCARD >> WEIGHT_OF_MIR;
+    std::cout << "Введите веса банков, через пробелы в след. порядке: SberBank, Tbank, VTB: " << std::endl;
+    std::cin >> WEIGHT_OF_SBER >> WEIGHT_OF_TBANK >> WEIGHT_OF_VTB;
+    std::cout << "Введите количество строк в датасете: " << std::endl;
+    std::cin >> TOTAL_ROWS;
     std::cout << "Генерация датасета покупок в Санкт-Петербурге..." << std::endl;
-
 
     try 
     {
+        if (WEIGHT_OF_MASTERCARD + WEIGHT_OF_MIR <= 0) 
+        {
+            throw std::runtime_error("Некорректные веса платежных систем");
+        } else if (WEIGHT_OF_SBER + WEIGHT_OF_TBANK + WEIGHT_OF_VTB <= 0)
+        {
+            throw std::runtime_error("Некорректные веса банков");
+        } else if (TOTAL_ROWS <= 0)
+        {
+            throw std::runtime_error("некорректное кол-во строк");
+        }
+
         DatasetGenerator generator;
         generator.generateDataset("spb_purchases_dataset.csv");
     } catch (const std::exception& e)
