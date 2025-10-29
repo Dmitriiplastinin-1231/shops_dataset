@@ -10,61 +10,49 @@
 #include <unordered_map>
 #include <vector>
 
+#include "dataset_anonim.hpp"
+
 
 const char VISA = '4';
 const char MASTERCARD = '5';
 const char MIR = '2';
 
-const bool STORE_NAME = true;
-const bool DATE = true;
-const bool COORDINATES = true;
-const bool CATEGORIES = true;
-const bool BRANDS = true;
-const bool ITEM_PRICE = true;
-const bool CARD_NUMBER = true;
-const bool RECEIPT_NUMBER = true;
-const bool TOTAL_PRICE = true;
+bool STORE_NAME = true;
+bool DATE = true;
+bool COORDINATES = true;
+bool CATEGORIES = true;
+bool BRANDS = true;
+bool ITEM_PRICE = true;
+bool CARD_NUMBER = true;
+bool RECEIPT_NUMBER = true;
+bool TOTAL_PRICE = true;
 
 std::unordered_map<std::string, std::string> categories;
 std::unordered_map<std::string, std::string> brands;
 std::unordered_map<std::string, std::string> store_categories;
 
-void check_k_anonym(std::string file_name, bool is_input);
-void anonymization(std::string file_name, std::string anonym_file_name);
-void parse_categories_and_brands(std::string file_name);
-void parse_brands_country_from_csv(std::string file_name);
-void parse_store_category_from_csv(std::string file_name);
+std::map<int, int> k_anonym;
+int rows_in_dataset = 0;
 
-std::string store_name_anonymization(std::string store_name);
-std::string escape_csv_field(const std::string& field);
-std::string date_anonymization(std::string date);
-std::string coordinates_anonymization(std::string coordinates);
-std::string price_anonymization(std::string price_str, int small, int normal, int maximum);
-std::string price_anonymization(std::string price_str, int middle);
-std::string card_anonymization(std::string card_number);
-std::string categories_anonymization(std::string category);
-std::string brand_anonymization(std::string brand);
+// int main()
+// {
+//     std::string source_file = "spb_purchases_dataset.csv";
+//     std::string output_file = "spb_purchases_anonym_dataset.csv";
 
-
-int main()
-{
-    std::string source_file = "spb_purchases_dataset.csv";
-    std::string output_file = "spb_purchases_anonym_dataset.csv";
-
-    std::cout << "Заполнение ассоциативных массивов..." << std::endl;
-    parse_store_category_from_csv("./src/assets/stores.csv");
-    std::cout << "1) Имена магазина -> категория магазина." << std::endl; 
-    parse_brands_country_from_csv("./src/assets/brands_country.csv");
-    std::cout << "2) Бренды -> страна этого бренда." << std::endl; 
-    parse_categories_and_brands("./src/assets/category.csv");
-    std::cout << "3) Категории -> обобщенный класс продукта." << std::endl; 
+//     std::cout << "Заполнение ассоциативных массивов..." << std::endl;
+//     parse_store_category_from_csv("./src/assets/stores.csv");
+//     std::cout << "1) Имена магазина -> категория магазина." << std::endl; 
+//     parse_brands_country_from_csv("./src/assets/brands_country.csv");
+//     std::cout << "2) Бренды -> страна этого бренда." << std::endl; 
+//     parse_categories_and_brands("./src/assets/category.csv");
+//     std::cout << "3) Категории -> обобщенный класс продукта." << std::endl; 
     
-    std::cout << "Вывод k-anonymity синтетических данных..." << std::endl;
-    check_k_anonym(source_file, false);
-    anonymization(source_file, output_file);
-    std::cout << "Вывод k-anonymity обезличенного набора данных..." << std::endl;
-    check_k_anonym(output_file, true);
-}
+//     std::cout << "Вывод k-anonymity синтетических данных..." << std::endl;
+//     check_k_anonym(source_file, false);
+//     anonymization(source_file, output_file);
+//     std::cout << "Вывод k-anonymity обезличенного набора данных..." << std::endl;
+//     check_k_anonym(output_file, true);
+// }
 
 void parse_store_category_from_csv(std::string file_name)
 {
@@ -186,17 +174,19 @@ void check_k_anonym(std::string file_name, bool is_input)
     }
 
     std::unordered_map<std::string, int> line_counts;
+    int rows_in_file = 0;
     std::string line;
 
     std::getline(file, line);
 
     while (std::getline(file, line)) {
         if (!line.empty()) {
+            rows_in_file++;
             ++line_counts[line];
         }
     }
     file.close();
-
+    rows_in_dataset = rows_in_file;
     
     std::map<int, int> k_distribution;
 
@@ -208,6 +198,7 @@ void check_k_anonym(std::string file_name, bool is_input)
         k_distribution[k] += k;
     }
 
+    k_anonym = k_distribution;
     
     std::cout << "{";
     bool first = true;
@@ -238,6 +229,15 @@ std::string escape_csv_field(const std::string& field)
 
 void anonymization(std::string file_name, std::string anonym_file_name)
 {
+
+    std::cout << "Заполнение ассоциативных массивов..." << std::endl;
+    parse_store_category_from_csv("./assets/stores.csv");
+    std::cout << "1) Имена магазина -> категория магазина." << std::endl; 
+    parse_brands_country_from_csv("./assets/brands_country.csv");
+    std::cout << "2) Бренды -> страна этого бренда." << std::endl; 
+    parse_categories_and_brands("./assets/category.csv");
+    std::cout << "3) Категории -> обобщенный класс продукта." << std::endl; 
+
     std::cout << "Начало обезличивания..." << std::endl;
 
     std::ifstream file(file_name);
