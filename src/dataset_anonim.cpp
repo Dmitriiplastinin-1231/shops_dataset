@@ -52,11 +52,11 @@ int main()
     std::string output_file = "spb_purchases_anonym_dataset.csv";
 
     std::cout << "Заполнение ассоциативных массивов..." << std::endl;
-    parse_store_category_from_csv("stores.csv");
+    parse_store_category_from_csv("./src/assets/stores.csv");
     std::cout << "1) Имена магазина -> категория магазина." << std::endl; 
-    parse_brands_country_from_csv("brands_country.csv");
+    parse_brands_country_from_csv("./src/assets/brands_country.csv");
     std::cout << "2) Бренды -> страна этого бренда." << std::endl; 
-    parse_categories_and_brands("category.csv");
+    parse_categories_and_brands("./src/assets/category.csv");
     std::cout << "3) Категории -> обобщенный класс продукта." << std::endl; 
     
     std::cout << "Вывод k-anonymity синтетических данных..." << std::endl;

@@ -113,8 +113,8 @@ void DatasetGenerator::initialize_dictionaries()
 {
     std::cout << "Инилизация словарей..." << std::endl;
 
-    parse_store_from_csv("stores.csv");
-    parse_brands_from_csv("category.csv");
+    parse_store_from_csv("./src/assets/stores.csv");
+    parse_brands_from_csv("./src/assets/category.csv");
 
 }
 
