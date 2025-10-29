@@ -39,7 +39,7 @@ std::string store_name_anonymization(std::string store_name);
 std::string escape_csv_field(const std::string& field);
 std::string date_anonymization(std::string date);
 std::string coordinates_anonymization(std::string coordinates);
-std::string price_anonymization(std::string price_str, int small, int normal);
+std::string price_anonymization(std::string price_str, int small, int normal, int maximum);
 std::string price_anonymization(std::string price_str, int middle);
 std::string card_anonymization(std::string card_number);
 std::string categories_anonymization(std::string category);
@@ -299,10 +299,10 @@ void anonymization(std::string file_name, std::string anonym_file_name)
             if (COORDINATES){coordinates = coordinates_anonymization(coordinates);}
             if (CATEGORIES){category = categories_anonymization(category);}
             if (BRANDS){brand = brand_anonymization(brand);}
-            if (ITEM_PRICE){item_price = price_anonymization(item_price, 500);}
+            if (ITEM_PRICE){item_price = price_anonymization(item_price, 1000, 10000, 90000);}
             if (CARD_NUMBER){card_number = card_anonymization(card_number);}
             if (RECEIPT_NUMBER){receipt_number = "None";}
-            if (TOTAL_PRICE){total_price = price_anonymization(total_price, 5000);}
+            if (TOTAL_PRICE){total_price = price_anonymization(total_price, 5000, 20000, 200000);}
         }
         
         anonym_file << escape_csv_field(store_name) << ","
@@ -355,12 +355,12 @@ std::string coordinates_anonymization(std::string coordinates)
     return '"' + lat + ',' + lon + '"';
 }
 
-std::string price_anonymization(std::string price_str, int small, int normal){
+std::string price_anonymization(std::string price_str, int small, int normal, int maximum){
     int price = std::stoi(price_str);
 
-    if (price <= small) {return "Дешево";} 
-    else if (price <= normal) {return "Нормальная";}
-    else {return "Дорого";}
+    if (price <= small) {return ("0-" + std::to_string(small) + " р");} 
+    else if (price <= normal) {return (std::to_string(small+1) + "-" + std::to_string(normal) + " р");}
+    else {return (std::to_string(normal + 1) + "-" + std::to_string(maximum) + " р");}
 }
 std::string price_anonymization(std::string price_str, int middle) {
     int price = std::stoi(price_str);
@@ -368,6 +368,7 @@ std::string price_anonymization(std::string price_str, int middle) {
     if (price <= middle) {return ("до " + std::to_string(middle));} 
     else {return ("после " + std::to_string(middle));}
 }
+
 
 std::string card_anonymization(std::string card_number)
 {
