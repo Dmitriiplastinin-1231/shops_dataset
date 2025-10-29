@@ -25,9 +25,6 @@ add_custom_command(TARGET DataAnonymizer POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_SOURCE_DIR}/spb_purchases_dataset.csv
         ${CMAKE_CURRENT_BINARY_DIR}/spb_purchases_dataset.csv
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${CMAKE_SOURCE_DIR}/spb_purchases_anonym_dataset.csv
-        ${CMAKE_CURRENT_BINARY_DIR}/spb_purchases_anonym_dataset.csv
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/src/assets
         ${CMAKE_CURRENT_BINARY_DIR}/assets

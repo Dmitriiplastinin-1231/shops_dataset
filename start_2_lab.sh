@@ -1,2 +1,6 @@
-g++ ./src/dataset_anonim.cpp
-./a.out
+rm -r ./build
+mkdir build
+cd build
+cmake ..
+make
+./DataAnonymizer
