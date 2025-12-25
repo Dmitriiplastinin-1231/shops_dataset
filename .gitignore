@@ -2,3 +2,7 @@ spb_purchases_dataset.csv
 spb_purchases_anonym_dataset.csv
 a.out
 build/
+claster_visualization
+datasets
+dataset_*
+dist_Original_*
