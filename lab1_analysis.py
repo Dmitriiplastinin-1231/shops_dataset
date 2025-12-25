@@ -344,7 +344,7 @@ def align_clusters(ref_labels, new_labels):
 
 def forel_clustering(data, radius):
     """
-    FOREL clustering algorithm.
+    FOREL clustering algorithm using Pearson Correlation Distance.
     Returns cluster labels for each point in data.
     """
     unclustered_mask = np.ones(len(data), dtype=bool)
@@ -354,13 +354,29 @@ def forel_clustering(data, radius):
     while np.any(unclustered_mask):
         # Pick a random unclustered point as initial center
         current_indices = np.where(unclustered_mask)[0]
-        center = data[np.random.choice(current_indices)]
+        idx = np.random.choice(current_indices)
+        center = data[idx]
         
-        while True:
-            distances = np.linalg.norm(data - center, axis=1)
+        iteration = 0
+        max_iter = 20 # Limit iterations to prevent infinite loops
+        
+        while iteration < max_iter:
+            iteration += 1
+            
+            # Use Pearson correlation distance: 1 - correlation
+            # pairwise_distances returns a matrix (n_samples, 1), so we flatten it
+            distances = pairwise_distances(data, center.reshape(1, -1), metric='correlation').flatten()
+            
+            # Handle potential NaNs (if variance is 0) by setting them to max distance (2.0)
+            distances = np.nan_to_num(distances, nan=2.0)
+            
             neighbors_mask = (distances <= radius) & unclustered_mask
             
             if not np.any(neighbors_mask):
+                # Should not happen if radius >= 0 and point is in data, unless it's a NaN-distance point
+                # Mark the seed point as noise or its own cluster to avoid infinite outer loop
+                labels[idx] = -1 # Noise
+                unclustered_mask[idx] = False
                 break
                 
             new_center = np.mean(data[neighbors_mask], axis=0)
@@ -372,6 +388,20 @@ def forel_clustering(data, radius):
                 cluster_id += 1
                 break
             center = new_center
+        else:
+            # Max iterations reached - accept current cluster to progress
+            # Recalculate neighbors for final center
+            distances = pairwise_distances(data, center.reshape(1, -1), metric='correlation').flatten()
+            distances = np.nan_to_num(distances, nan=2.0)
+            neighbors_mask = (distances <= radius) & unclustered_mask
+            
+            if np.any(neighbors_mask):
+                labels[neighbors_mask] = cluster_id
+                unclustered_mask[neighbors_mask] = False
+                cluster_id += 1
+            else:
+                # Force remove seed to avoid loop
+                unclustered_mask[idx] = False
             
     return labels
 
@@ -418,7 +448,7 @@ from sklearn.metrics import silhouette_score
 
 def evaluate_clustering_quality(data, labels):
     """
-    Calculates the quality of clustering.
+    Calculates the quality of clustering using Silhouette Score.
     """
     if len(set(labels)) < 2:
         return -1.0
@@ -427,6 +457,28 @@ def evaluate_clustering_quality(data, labels):
         indices = np.random.choice(len(data), 5000, replace=False)
         return silhouette_score(data[indices], labels[indices])
     return silhouette_score(data, labels)
+
+def calculate_phi_index(labels_true, labels_pred):
+    """
+    Calculates the Phi Index (based on Chi-square statistic) to measure 
+    the association between two clusterings.
+    Phi = sqrt(chi2 / n)
+    """
+    if len(labels_true) != len(labels_pred):
+        print("Warning: Label lengths do not match for Phi Index.")
+        return 0.0
+        
+    # Create contingency table (confusion matrix)
+    contingency_matrix = pd.crosstab(labels_true, labels_pred)
+    
+    # Calculate Chi-square statistic
+    chi2, _, _, _ = stats.chi2_contingency(contingency_matrix)
+    
+    n = len(labels_true)
+    if n == 0: return 0.0
+    
+    phi = np.sqrt(chi2 / n)
+    return phi
 
 def spa_feature_selection(df, target_clusters=None):
     """
@@ -569,7 +621,10 @@ def main():
             
         optimal_radius = current_radius
         
-        print(f"Clustering Original with best features (radius={optimal_radius:.2f}) produced {n_clusters_best} clusters.")
+        # Calculate Silhouette Score for Original
+        sil_score_best = evaluate_clustering_quality(data_best_sample, labels_best)
+        print(f"Clustering Original with best features (radius={optimal_radius:.2f}) produced {n_clusters_best} clusters. Silhouette Score: {sil_score_best:.4f}")
+        
         characterize_clusters(df_best_sample, labels_best, mappings)
         save_advanced_visualizations(df_best_sample, labels_best, mappings, f"Clustering Best Features {size}", f"clusters_best_{size}")
         
@@ -605,34 +660,38 @@ def main():
                 print(f"Method: {name}, Size: {size}, Missing: {pct*100}%, Mean Rel Error: {mean_rel_error:.4f}")
                 
                 # Compare Clustering on Restored Data
-                # We do this for all percentages or just one? User didn't specify, but usually interesting to see.
-                # Let's do it for 10% as before to save time, or maybe all if fast. 
-                # Given the user wants to "connect" them, let's do it for 10% as a representative case.
-                if pct == 0.10:
-                    print(f"  Clustering {name} restored data (Aligned to Original)...")
-                    
-                    # 1. Prepare data using BEST FEATURES
-                    scaler_imp = StandardScaler()
-                    data_imp = scaler_imp.fit_transform(df_imp[best_feats])
-                    
-                    # 2. Use SAME SAMPLE INDICES
-                    data_imp_sample = data_imp[sample_indices]
-                    df_imp_sample = df_imp.iloc[sample_indices]
-                    
-                    # 3. Cluster using OPTIMAL RADIUS
-                    labels_imp = forel_clustering(data_imp_sample, radius=optimal_radius)
-                    n_clusters_imp = len(np.unique(labels_imp))
-                    
-                    # 4. Align Labels to Original
-                    aligned_labels = align_clusters(original_labels_sample, labels_imp)
-                    
-                    print(f"  {name} produced {n_clusters_imp} clusters (Radius: {optimal_radius:.2f}).")
-                    
-                    # 5. Visualize
-                    characterize_clusters(df_imp_sample, aligned_labels, mappings)
-                    save_advanced_visualizations(df_imp_sample, aligned_labels, mappings, 
-                                               f"Clustering {name} (Restored & Aligned)", 
-                                               f"clusters_{name}_{size}_aligned")
+                print(f"  Clustering {name} restored data (Aligned to Original)...")
+                
+                # 1. Prepare data using BEST FEATURES
+                scaler_imp = StandardScaler()
+                data_imp = scaler_imp.fit_transform(df_imp[best_feats])
+                
+                # 2. Use SAME SAMPLE INDICES
+                data_imp_sample = data_imp[sample_indices]
+                df_imp_sample = df_imp.iloc[sample_indices]
+                
+                # 3. Cluster using OPTIMAL RADIUS
+                labels_imp = forel_clustering(data_imp_sample, radius=optimal_radius)
+                n_clusters_imp = len(np.unique(labels_imp))
+                
+                # Calculate Silhouette Score for Restored
+                sil_score_imp = evaluate_clustering_quality(data_imp_sample, labels_imp)
+                
+                # Calculate Phi Index vs Original
+                phi_index = calculate_phi_index(original_labels_sample, labels_imp)
+                
+                # 4. Align Labels to Original
+                aligned_labels = align_clusters(original_labels_sample, labels_imp)
+                
+                print(f"  {name} produced {n_clusters_imp} clusters (Radius: {optimal_radius:.2f}).")
+                print(f"  Silhouette: {sil_score_imp:.4f}")
+                print(f"  >>> PHI INDEX (vs Original): {phi_index:.4f} <<<")
+                
+                # 5. Visualize
+                characterize_clusters(df_imp_sample, aligned_labels, mappings)
+                save_advanced_visualizations(df_imp_sample, aligned_labels, mappings, 
+                                           f"Clustering {name} (Restored & Aligned)", 
+                                           f"clusters_{name}_{size}_aligned_{int(pct*100)}")
 
 if __name__ == "__main__":
     main()
